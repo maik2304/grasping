@@ -1,0 +1,1 @@
+{"network": "alexnet", "criterion": "MSE", "dataset_path": "Dataset", "random_rotate": true, "random_translate": true, "num_workers": 8, "n_splits": 5, "batch_size": 128, "epochs": 100, "optim": "adam", "description": "", "logdir": "logs/", "vis": false, "random_seed": 123}
