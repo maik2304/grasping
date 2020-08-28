@@ -1,8 +1,0 @@
-[14:32:37] {/home/maik/Scaricati/robotic-grasping-master/train.py:217} INFO - Loading Network...
-[14:32:40] {/home/maik/Scaricati/robotic-grasping-master/train.py:239} INFO - Done
-[14:32:40] {/home/maik/Scaricati/robotic-grasping-master/train.py:250} INFO - Loading Cornell Dataset...
-[14:32:40] {/home/maik/Scaricati/robotic-grasping-master/train.py:263} INFO - Done
-[14:32:40] {/home/maik/Scaricati/robotic-grasping-master/train.py:265} INFO - Dataset size is 885
-[14:32:40] {/home/maik/Scaricati/robotic-grasping-master/train.py:292} INFO - Training size: 796
-[14:32:40] {/home/maik/Scaricati/robotic-grasping-master/train.py:293} INFO - Validation size: 89
-[14:32:40] {/home/maik/Scaricati/robotic-grasping-master/train.py:302} INFO - Beginning Epoch 00

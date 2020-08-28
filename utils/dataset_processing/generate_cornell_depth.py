@@ -12,7 +12,7 @@ if __name__ == '__main__':
     parser.add_argument('path', type=str, help='Path to Cornell Grasping Dataset')
     args = parser.parse_args()
 
-    pcds = glob.glob(os.path.join(args.path, 'pcd*[0-9].txt'))
+    pcds = glob.glob(os.path.join(args.path, '*', 'pcd*[0-9].txt'))
     pcds.sort()
 
     for pcd in pcds:

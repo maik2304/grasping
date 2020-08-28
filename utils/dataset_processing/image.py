@@ -42,20 +42,12 @@ class Image:
         if resize is not None:
             self.resize(resize)
 
-    def cropped(self, *args, **kwargs):
-        """
-        :return: Cropped copy of the image.
-        """
-        i = self.copy()
-        i.crop(*args, **kwargs)
-        return i
-
     def normalise(self):
         """
         Normalise the image by converting to float [0,1] and zero-centering
         """
         self.img = self.img.astype(np.float32) / 255.0
-        self.img -= self.img.mean()
+        #self.img -= self.img.mean()
 
     def resize(self, shape):
         """
@@ -65,14 +57,6 @@ class Image:
         if self.img.shape == shape:
             return
         self.img = resize(self.img, shape, preserve_range=True).astype(self.img.dtype)
-
-    def resized(self, *args, **kwargs):
-        """
-        :return: Resized copy of the image.
-        """
-        i = self.copy()
-        i.resize(*args, **kwargs)
-        return i
 
     def rotate(self, angle, center=None):
         """
@@ -84,14 +68,6 @@ class Image:
             center = (center[1], center[0])
         self.img = rotate(self.img, angle / np.pi * 180, center=center, mode='symmetric', preserve_range=True).astype(
             self.img.dtype)
-
-    def rotated(self, *args, **kwargs):
-        """
-        :return: Rotated copy of image.
-        """
-        i = self.copy()
-        i.rotate(*args, **kwargs)
-        return i
 
     def show(self, ax=None, **kwargs):
         """
@@ -115,14 +91,6 @@ class Image:
         orig_shape = self.img.shape
         self.img = self.img[sr:self.img.shape[0] - sr, sc: self.img.shape[1] - sc].copy()
         self.img = resize(self.img, orig_shape, mode='symmetric', preserve_range=True).astype(self.img.dtype)
-
-    def zoomed(self, *args, **kwargs):
-        """
-        :return: Zoomed copy of the image.
-        """
-        i = self.copy()
-        i.zoom(*args, **kwargs)
-        return i
 
 
 class DepthImage(Image):
@@ -161,8 +129,8 @@ class DepthImage(Image):
                     y = float(ls[1])
                     z = float(ls[2])
 
-                    img[r, c] = np.sqrt(x ** 2 + y ** 2 + z ** 2)
-
+                    #img[r, c] = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+                    img[r, c] = z
                 else:
                     img[r, c] = float(ls[index])
 
@@ -191,41 +159,11 @@ class DepthImage(Image):
         self.img = self.img[1:-1, 1:-1]
         self.img = self.img * scale
 
-    def gradients(self):
-        """
-        Compute gradients of the depth image using Sobel filtesr.
-        :return: Gradients in X direction, Gradients in Y diretion, Magnitude of XY gradients.
-        """
-        grad_x = cv2.Sobel(self.img, cv2.CV_64F, 1, 0, borderType=cv2.BORDER_DEFAULT)
-        grad_y = cv2.Sobel(self.img, cv2.CV_64F, 0, 1, borderType=cv2.BORDER_DEFAULT)
-        grad = np.sqrt(grad_x ** 2 + grad_y ** 2)
-
-        return DepthImage(grad_x), DepthImage(grad_y), DepthImage(grad)
-
     def normalise(self):
         """
         Normalise by subtracting the mean and clippint [-1, 1]
         """
-        #self.img = np.clip((self.img - self.img.mean()), -1, 1)
-        self.img = cv2.normalize(self.img,None,alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-         
+        self.img = np.clip((self.img - self.img.mean()), -1, 1)
+        self.img = cv2.normalize(self.img,None,alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
 
 
-class WidthImage(Image):
-    """
-    A width image is one that describes the desired gripper width at each pixel.
-    """
-
-    def zoom(self, factor):
-        """
-        "Zoom" the image by cropping and resizing.  Also scales the width accordingly.
-        :param factor: Factor to zoom by. e.g. 0.5 will keep the center 50% of the image.
-        """
-        super().zoom(factor)
-        self.img = self.img / factor
-
-    def normalise(self):
-        """
-        Normalise by mapping [0, 150] -> [0, 1]
-        """
-        self.img = np.clip(self.img, 0, 150.0) / 150.0

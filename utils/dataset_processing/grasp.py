@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from skimage.draw import polygon
 from skimage.feature import peak_local_max
-
+from shapely.geometry import Polygon
 
 def _gr_text_to_no(l, offset=(0, 0)):
     """
@@ -88,23 +88,6 @@ class GraspRectangles:
                     continue
         return cls(grs)
 
-    @classmethod
-    def load_from_jacquard_file(cls, fname, scale=1.0):
-        """
-        Load grasp rectangles from a Jacquard dataset file.
-        :param fname: Path to file.
-        :param scale: Scale to apply (e.g. if resizing images)
-        :return: GraspRectangles()
-        """
-        grs = []
-        with open(fname) as f:
-            for l in f:
-                x, y, theta, w, h = [float(v) for v in l[:-1].split(';')]
-                # index based on row, column (y,x), and the Jacquard dataset's angles are flipped around an axis.
-                grs.append(Grasp(np.array([y, x]), -theta / 180.0 * np.pi, w, h).as_gr)
-        grs = cls(grs)
-        grs.scale(scale)
-        return grs
 
     def append(self, gr):
         """
@@ -268,7 +251,17 @@ class GraspRectangle:
         """
         if abs((self.angle - gr.angle + np.pi / 2) % np.pi - np.pi / 2) > angle_threshold:
             return 0
-
+        
+        p1 = Polygon([(self.points[0,1],self.points[0,0]),(self.points[1,1],self.points[1,0]),(self.points[2,1],self.points[2,0]),(self.points[3,1],self.points[3,0])])
+        p2 = Polygon([(gr.points[0,1],gr.points[0,0]),(gr.points[1,1],gr.points[1,0]),(gr.points[2,1],gr.points[2,0]),(gr.points[3,1],gr.points[3,0])])
+        intersection = p1.intersection(p2)
+        union = p1.union(p2)
+        
+        if union == 0:
+            return 0
+        
+        return intersection.area/union.area
+        '''
         rr1, cc1 = self.polygon_coords()
         rr2, cc2 = polygon(gr.points[:, 0], gr.points[:, 1])
 
@@ -286,6 +279,7 @@ class GraspRectangle:
             return 0
         intersection = np.sum(canvas == 2)
         return intersection / union
+        '''
 
     def copy(self):
         """
@@ -314,7 +308,17 @@ class GraspRectangle:
         )
         c = np.array(center).reshape((1, 2))
         self.points = ((np.dot(R, (self.points - c).T)).T + c).astype(np.int)
-
+    
+    def resize(self,output_size,resize_size):
+        '''
+        Rescale grasp rectangle
+        
+        :param output_size: Size resulting from crop
+        : param resize_size: Final size desired
+        '''        
+        self.points = (self.points * [resize_size / output_size, resize_size / output_size]).astype(np.int)
+        
+    
     def scale(self, factor):
         """
         :param factor: Scale grasp rectangle by factor
@@ -323,11 +327,10 @@ class GraspRectangle:
             return
         self.points *= factor
 
-    def plot(self, ax, color=None):
+    def plot(self, ax,color=None):
         """
         Plot grasping rectangle.
         :param ax: Existing matplotlib axis
-        :param q: Grasp quality
         :param color: matplotlib color code (optional)
         """
         points = np.vstack((self.points, self.points[0]))
@@ -384,18 +387,6 @@ class Grasp:
             ]
         ).astype(np.float))
 
-    def max_iou(self, grs):
-        """
-        Return maximum IoU between self and a list of GraspRectangles
-        :param grs: List of GraspRectangles
-        :return: Maximum IoU with any of the GraspRectangles
-        """
-        self_gr = self.as_gr
-        max_iou = 0
-        for gr in grs:
-            iou = self_gr.iou(gr)
-            max_iou = max(max_iou, iou)
-        return max_iou
 
     def plot(self, ax, color=None):
         """
@@ -405,14 +396,4 @@ class Grasp:
         """
         self.as_gr.plot(ax,color)
 
-    def to_jacquard(self, scale=1):
-        """
-        Output grasp in "Jacquard Dataset Format" (https://jacquard.liris.cnrs.fr/database.php)
-        :param scale: (optional) scale to apply to grasp
-        :return: string in Jacquard format
-        """
-        # Output in jacquard format.
-        return '%0.2f;%0.2f;%0.2f;%0.2f;%0.2f' % (
-            self.center[1] * scale, self.center[0] * scale, -1 * self.angle * 180 / np.pi, self.length * scale,
-            self.width * scale)
 
