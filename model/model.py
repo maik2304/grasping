@@ -59,7 +59,7 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
 
 def init_weights(m):
     if type(m) == nn.Linear:
-        nn.init.xavier_uniform_(m.weight)
+        nn.init.normal_(m.weight, mean=0, std=1.0)
         m.bias.data.fill_(0.01)
 
 class MyResNet(nn.Module):
@@ -74,17 +74,15 @@ class MyResNet(nn.Module):
         for param in self.pretrained.layer2.parameters():
             param.requires_grad = False  
         '''
-        self.pretrained  = nn.Sequential(*list(self.pretrained.children())[:-1]) 
+        #self.pretrained = nn.Sequential(*list(self.pretrained.children())[:-1]) 
 
-        self.my_new_layers = nn.Sequential(nn.Linear(512, 512),
+        my_new_layers = nn.Sequential(nn.Linear(512, 512),
                                         nn.ReLU(),
                                         nn.Dropout(p=0.2),
                                         nn.Linear(512, 6))
-        
-        self.my_new_layers.apply(init_weights)
+        self.pretrained.fc = my_new_layers
+        #self.my_new_layers.apply(init_weights)
 
     def forward(self, x):
-        x = self.pretrained(x)
-        x = x.view(-1,512)
-        x = self.my_new_layers(x)
+        x = self.pretrained(x)        
         return x

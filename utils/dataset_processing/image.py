@@ -164,6 +164,6 @@ class DepthImage(Image):
         Normalise by subtracting the mean and clippint [-1, 1]
         """
         self.img = np.clip((self.img - self.img.mean()), -1, 1)
-        self.img = cv2.normalize(self.img,None,alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+        self.img = cv2.normalize(self.img,None,alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
 
 

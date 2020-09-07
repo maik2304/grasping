@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 
+import random
 import cv2
 import numpy as np
 import tensorboardX
@@ -38,11 +39,11 @@ def parse_args():
     # Training
     parser.add_argument('--batch-size', type=int, default=128,
                         help='Batch size')    
-    parser.add_argument('--epochs', type=int, default=200,
+    parser.add_argument('--epochs', type=int, default=30,
                         help='Training epochs')    
     parser.add_argument('--optim', type=str, default='adam',
                         help='Optmizer for the training. (adam or SGD)')
-    parser.add_argument('--lr', type=float, default=0.0001,
+    parser.add_argument('--lr', type=float, default=0.001,
                         help='Learning rate')
     parser.add_argument('--wd', type=float, default=0.0001,
                         help='Weigth decay')
@@ -215,7 +216,7 @@ def run():
     net = net.to(device)
     
     if args.optim.lower() == 'adam':
-        optimizer = optim.Adam(net.parameters(),lr=args.lr,weight_decay = args.wd)
+        optimizer = optim.Adam(net.parameters(),lr=args.lr)
         #scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
     elif args.optim.lower() == 'sgd':
         optimizer = optim.SGD(net.parameters(), lr=args.lr, weight_decay = args.wd)
@@ -253,8 +254,8 @@ def run():
     count = 0
     best_iou = 0.0
 
-    indices = list(range(dataset.length))
-    split = int(np.floor(0.9 * dataset.length))
+    indices = list(range(dataset.len))
+    split = int(np.floor(0.9 * dataset.len))
     np.random.shuffle(indices)
     train_indices, val_indices = indices[:split], indices[split:]
 
@@ -282,6 +283,9 @@ def run():
         
         count+=1
         
+        np.random.seed(20)
+        random.seed(20) 
+
         logging.info('Beginning Epoch {:02d}'.format(epoch))
         train_results = training(epoch, net, device, criterion, train_loader, optimizer,tb)
         #scheduler.step()        
@@ -300,10 +304,10 @@ def run():
 
         # Save best performing network
         iou = test_results['correct'] / (test_results['correct'] + test_results['failed'])
-        '''
+        
         if iou > best_iou or epoch == 0 or (epoch % 10) == 0:
             torch.save(net, os.path.join(save_folder, 'epoch_%02d_iou_%0.2f' % (epoch, iou)))
-            best_iou = iou'''
+            best_iou = iou
             
 if __name__ == '__main__':
     run()

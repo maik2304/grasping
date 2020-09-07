@@ -4,6 +4,7 @@ import os
 from utils.dataset_processing import grasp, image
 import torch
 import numpy as np
+import random
 
 class CornellDataset(torch.utils.data.Dataset):
     """
@@ -20,7 +21,7 @@ class CornellDataset(torch.utils.data.Dataset):
         self.grasp_files = glob.glob(os.path.join(file_path, '*', 'pcd*cpos.txt'))
         self.grasp_files.sort()
         self.length = len(self.grasp_files)
-        self.len = self.length
+        self.len = 600*self.length
         
         if self.length == 0:
             raise FileNotFoundError('No dataset files found. Check path: {}'.format(file_path))
@@ -37,10 +38,16 @@ class CornellDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         
         index = idx % self.length
-        img = self.get_rgd(index)
-        gtbbs = self.get_gtbb(index)
-        gtbb = gtbbs[0]
+
+        rotations = [0, np.pi / 2, 2 * np.pi / 2, 3 * np.pi / 2]
+        rot = random.choice(rotations)
         
+        zoom = np.random.uniform(0.5, 1.0)
+
+        img = self.get_rgd(index,rot,zoom)
+        gtbbs = self.get_gtbb(index,rot,zoom)
+        gtbb = gtbbs[0]       
+
         bb = np.array([gtbb.center[0],gtbb.center[1],np.sin(2*gtbb.angle),np.cos(2*gtbb.angle),gtbb.length,gtbb.width])
         
         sample = {'img': torch.from_numpy(img), 'bb': torch.from_numpy(bb)}
