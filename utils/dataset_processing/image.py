@@ -44,7 +44,8 @@ class Image:
 
     def normalise(self):
         """
-        Normalise the image by converting to float [0,1] and zero-centering
+        Normalise the image by converting to float [0,1] following the structure of the thesis 
+        https://ro.ecu.edu.au/cgi/viewcontent.cgi?article=3172&context=theses
         """
         self.img = self.img.astype(np.float32) / 255.0
         #self.img -= self.img.mean()
@@ -161,9 +162,9 @@ class DepthImage(Image):
 
     def normalise(self):
         """
-        Normalise by subtracting the mean and clippint [-1, 1]
+        Normalise by subtracting the mean and clippint [-1, 1]. Then re-normalize between 0 and 1
         """
         self.img = np.clip((self.img - self.img.mean()), -1, 1)
-        self.img = cv2.normalize(self.img,None,alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+        self.img = cv2.normalize(self.img,None,alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
 
 

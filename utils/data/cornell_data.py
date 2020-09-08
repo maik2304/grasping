@@ -11,17 +11,21 @@ class CornellDataset(torch.utils.data.Dataset):
     Dataset wrapper for the Cornell dataset.
     """
 
-    def __init__(self, file_path,output_size=400,resize_size=224,**kwargs):
+    def __init__(self, file_path,output_size=400,resize_size=224,alfa = 600,**kwargs):
         """
         :param file_path: Cornell Dataset directory.
-        :param kwargs: kwargs for GraspDatasetBase
+        :param output_size: Size of Central Crop transformation
+        :param resize_size: Size of Resize transformation
+        :param alfa: factor of dataset length increasing      
         """
         super(CornellDataset, self).__init__(**kwargs)
 
         self.grasp_files = glob.glob(os.path.join(file_path, '*', 'pcd*cpos.txt'))
         self.grasp_files.sort()
         self.length = len(self.grasp_files)
-        self.len = 600*self.length
+        
+        # artificially increase the number of samples by passing the length directly to the dataset 
+        self.len = alfa*self.length
         
         if self.length == 0:
             raise FileNotFoundError('No dataset files found. Check path: {}'.format(file_path))
@@ -37,17 +41,21 @@ class CornellDataset(torch.utils.data.Dataset):
     
     def __getitem__(self, idx):
         
+        # modulo operation to repeatedly sample from the data.
         index = idx % self.length
 
         rotations = [0, np.pi / 2, 2 * np.pi / 2, 3 * np.pi / 2]
         rot = random.choice(rotations)
         
         zoom = np.random.uniform(0.5, 1.0)
-
+        
+        # img is composed by: RED, GREEN and DEPTH (RGD) channel
         img = self.get_rgd(index,rot,zoom)
+        
         gtbbs = self.get_gtbb(index,rot,zoom)
+        # Choose always the firs ground truth bounding box to avoid averaging effect
         gtbb = gtbbs[0]       
-
+        
         bb = np.array([gtbb.center[0],gtbb.center[1],np.sin(2*gtbb.angle),np.cos(2*gtbb.angle),gtbb.length,gtbb.width])
         
         sample = {'img': torch.from_numpy(img), 'bb': torch.from_numpy(bb)}
@@ -55,7 +63,9 @@ class CornellDataset(torch.utils.data.Dataset):
         return sample
     
     def _get_crop_attrs(self, idx):
+        # load the corresponding ground truth bounding boxes
         gtbbs = grasp.GraspRectangles.load_from_cornell_file(self.grasp_files[idx])
+        # obtaining the correct attributes in order to rotate correctly around the bounding boxes
         center = gtbbs.center
         left = max(0, min(center[1] - self.output_size // 2, 640 - self.output_size))
         top = max(0, min(center[0] - self.output_size // 2, 480 - self.output_size))
@@ -65,6 +75,7 @@ class CornellDataset(torch.utils.data.Dataset):
         gtbbs = grasp.GraspRectangles.load_from_cornell_file(self.grasp_files[idx])
         center, left, top = self._get_crop_attrs(idx)
         gtbbs.rotate(rot, center)
+        # offset to correct the effect of central crop 
         gtbbs.offset((-top, -left))
         gtbbs.zoom(zoom, (self.output_size // 2, self.output_size // 2))
         gtbbs.resize(self.output_size,self.resize_size)
@@ -96,6 +107,7 @@ class CornellDataset(torch.utils.data.Dataset):
         
         depth_img = self.get_depth(idx,rot,zoom)
         rgb_img = self.get_rgb(idx,rot,zoom)
-        rgb_img[2,:,:] = depth_img        
+        # substitute the BLUE channel with depth
+        rgb_img[2,:,:] = depth_img      
         return rgb_img
         

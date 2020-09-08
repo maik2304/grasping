@@ -73,6 +73,7 @@ def training(epoch, net, device, criterion, train_data, optimizer,tb):
     
     results = 0
     batch_idx = 0
+    
     # change flag of training
     net.train()
     
@@ -115,7 +116,7 @@ def validate(net, device, val_loader,criterion):
     :param net: Network
     :param device: Torch device
     :param val_loader: Validation Dataset
-    :return: Successes, Failures 
+    :return: results: correct,failed,validation loss
     
     """
     
@@ -144,9 +145,10 @@ def validate(net, device, val_loader,criterion):
             # forward propagation
             pred_bb = net(img).to(device).squeeze().cpu()
             
-            # evaluate the loss
+            # evaluate the validation loss
             loss = criterion(ground_bb,pred_bb)
-
+            
+            # grasp.Grasp is a class with __init__(self,center,angle,length,width)
             ground_gr = grasp.Grasp((ground_bb[0],ground_bb[1]),np.arctan2(ground_bb[2],ground_bb[3])/2,ground_bb[4],ground_bb[5])
             ground_rect = ground_gr.as_gr
             
@@ -205,14 +207,16 @@ def run():
     logging.getLogger('').addHandler(console)
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    
-     # Load the network
+    # set the seed for reproducibility
+    torch.manual_seed(0)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+     # Load the network    
     logging.info('Loading Network...')
     
-    #net = initialize_model(args.network, 6, feature_extract=False, use_pretrained=True)
-
-    pretrained = models.resnet34(pretrained=True)
-    net = MyResNet(pretrained)
+    # Initialization of the network
+    net = initialize_model(args.network, 6, feature_extract=False, use_pretrained=True)
     net = net.to(device)
     
     if args.optim.lower() == 'adam':
@@ -226,8 +230,6 @@ def run():
         raise NotImplementedError('Optimizer {} is not implemented'.format(args.optim))
     
     if args.criterion.lower() == 'mse':
-        criterion = nn.MSELoss()
-    elif args.criterion.lower() == 'rmse':
         criterion = nn.MSELoss()
     else:
         raise NotImplementedError('Criterion {} is not implemented'.format(args.criterion))
@@ -256,7 +258,7 @@ def run():
 
     indices = list(range(dataset.len))
     split = int(np.floor(0.9 * dataset.len))
-    np.random.shuffle(indices)
+    #np.random.shuffle(indices)
     train_indices, val_indices = indices[:split], indices[split:]
 
     train_data = torch.utils.data.Subset(dataset, train_indices)
